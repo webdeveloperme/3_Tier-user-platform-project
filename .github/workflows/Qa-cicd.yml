@@ -14,11 +14,8 @@ jobs:
     name: Gitleaks Scan
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Source Code
-        uses: actions/checkout@v4
-
-      - name: Run Gitleaks Scan
-        run: |
+      - uses: actions/checkout@v4
+      - run: |
           docker run --rm \
             -v "${{ github.workspace }}:/repo" \
             zricethezav/gitleaks:latest detect \
@@ -27,180 +24,139 @@ jobs:
             --report-path=/repo/gitleaks-report.json \
             --redact \
             --exit-code 0
-
-      - name: Upload Gitleaks report
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: gitleaks-report
           path: gitleaks-report.json
-          if-no-files-found: warn
 
   checkov-dockerfile:
-    name: Checkov Dockerfile Scan
     runs-on: ubuntu-latest
     needs: gitleaks-scan
     steps:
-      - name: Checkout source code
-        uses: actions/checkout@v4
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - name: Install Checkov
-        run: pip install checkov
-      - name: Run Checkov Dockerfile scan
-        run: |
-          checkov -d . \
-            --framework dockerfile \
-            --output json > checkov-dockerfile-report.json || true
-      - name: Upload Checkov Dockerfile report
-        uses: actions/upload-artifact@v4
-        with:
-          name: checkov-dockerfile-report
-          path: checkov-dockerfile-report.json
-          if-no-files-found: warn
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install checkov
+      - run: checkov -d . --framework dockerfile --output json > checkov-dockerfile-report.json || true
+      - uses: actions/upload-artifact@v4
+        with: { name: checkov-dockerfile-report, path: checkov-dockerfile-report.json }
 
   checkov-terraform:
-    name: Checkov Terraform Scan
     runs-on: ubuntu-latest
     needs: gitleaks-scan
     steps:
-      - name: Checkout source code
-        uses: actions/checkout@v4
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - name: Install Checkov
-        run: pip install checkov
-      - name: Run Checkov Terraform scan
-        run: |
-          checkov -d . \
-            --framework terraform \
-            --output json > checkov-terraform-report.json || true
-      - name: Upload Checkov Terraform report
-        uses: actions/upload-artifact@v4
-        with:
-          name: checkov-terraform-report
-          path: checkov-terraform-report.json
-          if-no-files-found: warn
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install checkov
+      - run: checkov -d . --framework terraform --output json > checkov-terraform-report.json || true
+      - uses: actions/upload-artifact@v4
+        with: { name: checkov-terraform-report, path: checkov-terraform-report.json }
 
   checkov-k8s:
-    name: Checkov Kubernetes Scan
     runs-on: ubuntu-latest
     needs: gitleaks-scan
     steps:
-      - name: Checkout source code
-        uses: actions/checkout@v4
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - name: Install Checkov
-        run: pip install checkov
-      - name: Run Checkov Kubernetes scan
-        run: |
-          checkov -d . \
-            --framework kubernetes \
-            --output json > checkov-k8s-report.json || true
-      - name: Upload Checkov Kubernetes report
-        uses: actions/upload-artifact@v4
-        with:
-          name: checkov-k8s-report
-          path: checkov-k8s-report.json
-          if-no-files-found: warn
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install checkov
+      - run: checkov -d . --framework kubernetes --output json > checkov-k8s-report.json || true
+      - uses: actions/upload-artifact@v4
+        with: { name: checkov-k8s-report, path: checkov-k8s-report.json }
 
   trivy-client:
-    name: Trivy Client Scan (Frontend)
     runs-on: ubuntu-latest
     needs: gitleaks-scan
     steps:
-      - name: Checkout source code
-        uses: actions/checkout@v4
-      - name: Run Trivy scan on client
-        run: |
+      - uses: actions/checkout@v4
+      - run: |
           docker run --rm \
             -v "${{ github.workspace }}/client:/client" \
             aquasec/trivy:latest fs /client \
             --format json \
             --output /client/trivy-client-report.json || true
-      - name: Upload Trivy Client report
-        uses: actions/upload-artifact@v4
-        with:
-          name: trivy-client-report
-          path: client/trivy-client-report.json
-          if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        with: { name: trivy-client-report, path: client/trivy-client-report.json }
 
   trivy-server:
-    name: Trivy Server Scan (Backend)
     runs-on: ubuntu-latest
     needs: gitleaks-scan
     steps:
-      - name: Checkout source code
-        uses: actions/checkout@v4
-      - name: Run Trivy scan on server
-        run: |
+      - uses: actions/checkout@v4
+      - run: |
           docker run --rm \
             -v "${{ github.workspace }}/server:/server" \
             aquasec/trivy:latest fs /server \
             --format json \
             --output /server/trivy-server-report.json || true
-      - name: Upload Trivy Server report
-        uses: actions/upload-artifact@v4
-        with:
-          name: trivy-server-report
-          path: server/trivy-server-report.json
-          if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        with: { name: trivy-server-report, path: server/trivy-server-report.json }
 
-  lint:
-    name: Lint Codebase
+  client-lint:
     runs-on: ubuntu-latest
     needs: gitleaks-scan
     steps:
-      - name: Checkout source code
-        uses: actions/checkout@v4
-      - name: Run ESLint
-        run: |
+      - uses: actions/checkout@v4
+      - run: |
           npm install eslint --save-dev
-          npx eslint client server --format json -o lint-report.json || true
-      - name: Upload Lint report
-        uses: actions/upload-artifact@v4
-        with:
-          name: lint-report
-          path: lint-report.json
-          if-no-files-found: warn
+          npx eslint client --format json -o client-lint-report.json || true
+      - uses: actions/upload-artifact@v4
+        with: { name: client-lint-report, path: client-lint-report.json }
+
+  server-lint:
+    runs-on: ubuntu-latest
+    needs: gitleaks-scan
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          npm install eslint --save-dev
+          npx eslint server --format json -o server-lint-report.json || true
+      - uses: actions/upload-artifact@v4
+        with: { name: server-lint-report, path: server-lint-report.json }
+
+  client-test:
+    runs-on: ubuntu-latest
+    needs: client-lint
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm install
+      - run: npm test --prefix client || true
+      - uses: actions/upload-artifact@v4
+        with: { name: client-test-report, path: client/test-results }
+
+  server-test:
+    runs-on: ubuntu-latest
+    needs: server-lint
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm install
+      - run: npm test --prefix server || true
+      - uses: actions/upload-artifact@v4
+        with: { name: server-test-report, path: server/test-results }
 
   summary:
-    name: Collect All Reports
     runs-on: ubuntu-latest
-    needs: [checkov-dockerfile, checkov-terraform, checkov-k8s, trivy-client, trivy-server, lint]
+    needs: [checkov-dockerfile, checkov-terraform, checkov-k8s, trivy-client, trivy-server, client-lint, server-lint, client-test, server-test]
     steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: reports
-
-      - name: Generate Markdown summary table
-        run: |
+      - uses: actions/download-artifact@v4
+        with: { path: reports }
+      - run: |
           mkdir -p combined
-          echo "| Tool               | Report File                    | Artifact Name             |" > combined/summary.md
-          echo "|--------------------|--------------------------------|---------------------------|" >> combined/summary.md
-          echo "| Gitleaks           | gitleaks-report.json           | gitleaks-report           |" >> combined/summary.md
-          echo "| Checkov Dockerfile | checkov-dockerfile-report.json | checkov-dockerfile-report |" >> combined/summary.md
-          echo "| Checkov Terraform  | checkov-terraform-report.json  | checkov-terraform-report  |" >> combined/summary.md
-          echo "| Checkov Kubernetes | checkov-k8s-report.json        | checkov-k8s-report        |" >> combined/summary.md
-          echo "| Trivy Client       | trivy-client-report.json       | trivy-client-report       |" >> combined/summary.md
-          echo "| Trivy Server       | trivy-server-report.json       | trivy-server-report       |" >> combined/summary.md
-          echo "| Lint (ESLint)      | lint-report.json               | lint-report               |" >> combined/summary.md
-
-      - name: Upload combined reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: all-security-reports
-          path: combined
-          if-no-files-found: warn
-
-      - name: Add summary to GitHub Actions UI
-        run: |
+          echo "| Tool/Stage        | Report File                | Artifact Name            |" > combined/summary.md
+          echo "|-------------------|----------------------------|--------------------------|" >> combined/summary.md
+          echo "| Gitleaks          | gitleaks-report.json       | gitleaks-report          |" >> combined/summary.md
+          echo "| Checkov Dockerfile| checkov-dockerfile-report.json | checkov-dockerfile-report |" >> combined/summary.md
+          echo "| Checkov Terraform | checkov-terraform-report.json  | checkov-terraform-report  |" >> combined/summary.md
+          echo "| Checkov Kubernetes| checkov-k8s-report.json        | checkov-k8s-report        |" >> combined/summary.md
+          echo "| Trivy Client      | trivy-client-report.json       | trivy-client-report       |" >> combined/summary.md
+          echo "| Trivy Server      | trivy-server-report.json       | trivy-server-report       |" >> combined/summary.md
+          echo "| Client Lint       | client-lint-report.json        | client-lint-report        |" >> combined/summary.md
+          echo "| Server Lint       | server-lint-report.json        | server-lint-report        |" >> combined/summary.md
+          echo "| Client Test       | client-test-report            | client-test-report        |" >> combined/summary.md
+          echo "| Server Test       | server-test-report            | server-test-report        |" >> combined/summary.md
+      - uses: actions/upload-artifact@v4
+        with: { name: all-security-reports, path: combined }
+      - run: |
           echo "## Security & Quality Scan Summary" >> $GITHUB_STEP_SUMMARY
           cat combined/summary.md >> $GITHUB_STEP_SUMMARY
