@@ -152,10 +152,28 @@ jobs:
           path: server/trivy-server-report.json
           if-no-files-found: warn
 
+  lint:
+    name: Lint Codebase
+    runs-on: ubuntu-latest
+    needs: gitleaks-scan
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+      - name: Run ESLint
+        run: |
+          npm install eslint --save-dev
+          npx eslint client server --format json -o lint-report.json || true
+      - name: Upload Lint report
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-report
+          path: lint-report.json
+          if-no-files-found: warn
+
   summary:
     name: Collect All Reports
     runs-on: ubuntu-latest
-    needs: [checkov-dockerfile, checkov-terraform, checkov-k8s, trivy-client, trivy-server]
+    needs: [checkov-dockerfile, checkov-terraform, checkov-k8s, trivy-client, trivy-server, lint]
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -173,6 +191,7 @@ jobs:
           echo "| Checkov Kubernetes | checkov-k8s-report.json        | checkov-k8s-report        |" >> combined/summary.md
           echo "| Trivy Client       | trivy-client-report.json       | trivy-client-report       |" >> combined/summary.md
           echo "| Trivy Server       | trivy-server-report.json       | trivy-server-report       |" >> combined/summary.md
+          echo "| Lint (ESLint)      | lint-report.json               | lint-report               |" >> combined/summary.md
 
       - name: Upload combined reports
         uses: actions/upload-artifact@v4
@@ -183,5 +202,5 @@ jobs:
 
       - name: Add summary to GitHub Actions UI
         run: |
-          echo "## Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Security & Quality Scan Summary" >> $GITHUB_STEP_SUMMARY
           cat combined/summary.md >> $GITHUB_STEP_SUMMARY
