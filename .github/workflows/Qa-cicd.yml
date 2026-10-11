@@ -147,13 +147,18 @@ jobs:
       - uses: actions/checkout@v4
       - run: npm install
         working-directory: client
-      - run: npm test || true
+      - run: npm test -- --coverage || true
         working-directory: client
       - uses: actions/upload-artifact@v4
         with:
           name: client-test-report
           path: client/test-results
           if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        with:
+          name: client-coverage
+          path: client/coverage/lcov.info
+          if-no-files-found: ignore
 
   server-test:
     name: Server Tests
@@ -163,13 +168,18 @@ jobs:
       - uses: actions/checkout@v4
       - run: npm install
         working-directory: server
-      - run: npm test || true
+      - run: npm test -- --coverage || true
         working-directory: server
       - uses: actions/upload-artifact@v4
         with:
           name: server-test-report
           path: server/test-results
           if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        with:
+          name: server-coverage
+          path: server/coverage/lcov.info
+          if-no-files-found: ignore
 
   sonarqube:
     name: SonarQube Analysis & Quality Gate Check
@@ -184,6 +194,10 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        with:
+          args: >
+            -Dsonar.tests=
+            -Dsonar.javascript.lcov.reportPaths=client/coverage/lcov.info,server/coverage/lcov.info
       - name: SonarQube Quality Gate check
         id: sonarqube-quality-gate-check
         uses: sonarsource/sonarqube-quality-gate-action@master
@@ -214,13 +228,3 @@ jobs:
           echo "| Client Lint       | client-lint-report.json        | client-lint-report        |" >> combined/summary.md
           echo "| Server Lint       | server-lint-report.json        | server-lint-report        |" >> combined/summary.md
           echo "| Client Test       | client-test-report             | client-test-report        |" >> combined/summary.md
-          echo "| Server Test       | server-test-report             | server-test-report        |" >> combined/summary.md
-          echo "| SonarQube         | Quality Gate Status            | sonarqube-quality-gate    |" >> combined/summary.md
-      - uses: actions/upload-artifact@v4
-        with:
-          name: all-security-reports
-          path: combined
-      - run: |
-          echo "## Security & Quality Scan Summary" >> $GITHUB_STEP_SUMMARY
-          cat combined/summary.md >> $GITHUB_STEP_SUMMARY
-          echo "SonarQube Quality Gate Status
