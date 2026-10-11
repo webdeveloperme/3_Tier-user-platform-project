@@ -138,7 +138,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npm install
-      - run: npm test --prefix client || true
+        working-directory: client   # ✅ install inside client folder
+      - run: npm test || true
+        working-directory: client   # ✅ run tests inside client folder
       - uses: actions/upload-artifact@v4
         with:
           name: client-test-report
@@ -151,7 +153,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npm install
-      - run: npm test --prefix server || true
+        working-directory: server   # ✅ install inside server folder
+      - run: npm test || true
+        working-directory: server   # ✅ run tests inside server folder
       - uses: actions/upload-artifact@v4
         with:
           name: server-test-report
@@ -170,4 +174,19 @@ jobs:
           echo "| Tool/Stage        | Report File                | Artifact Name            |" > combined/summary.md
           echo "|-------------------|----------------------------|--------------------------|" >> combined/summary.md
           echo "| Gitleaks          | gitleaks-report.json       | gitleaks-report          |" >> combined/summary.md
-          echo "| Checkov Dockerfile| checkov-dockerfile-report.json | checkov-dockerfile-report
+          echo "| Checkov Dockerfile| checkov-dockerfile-report.json | checkov-dockerfile-report |" >> combined/summary.md
+          echo "| Checkov Terraform | checkov-terraform-report.json  | checkov-terraform-report  |" >> combined/summary.md
+          echo "| Checkov Kubernetes| checkov-k8s-report.json        | checkov-k8s-report        |" >> combined/summary.md
+          echo "| Trivy Client      | trivy-client-report.json       | trivy-client-report       |" >> combined/summary.md
+          echo "| Trivy Server      | trivy-server-report.json       | trivy-server-report       |" >> combined/summary.md
+          echo "| Client Lint       | client-lint-report.json        | client-lint-report        |" >> combined/summary.md
+          echo "| Server Lint       | server-lint-report.json        | server-lint-report        |" >> combined/summary.md
+          echo "| Client Test       | client-test-report             | client-test-report        |" >> combined/summary.md
+          echo "| Server Test       | server-test-report             | server-test-report        |" >> combined/summary.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: all-security-reports
+          path: combined
+      - run: |
+          echo "## Security & Quality Scan Summary" >> $GITHUB_STEP_SUMMARY
+          cat combined/summary.md >> $GITHUB_STEP_SUMMARY
